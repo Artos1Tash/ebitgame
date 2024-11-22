@@ -23,7 +23,7 @@ type Game struct {
 
 func (g *Game) Update() error {
 
-	// move the player based on keyboar input (left, right, up down)
+	// move the player based on keyboar input (left, right, up, down, wasd)
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		g.player.X -= 2
 	}
@@ -55,7 +55,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts.GeoM.Translate(sprite.X, sprite.Y)
 
 		screen.DrawImage(
-			sprite.Img.SubImage(image.Rect(0, 0, 64, 64)).(*ebiten.Image),
+			sprite.Img.SubImage(image.Rect(0, 0, 70, 70)).(*ebiten.Image),
 			opts,
 		)
 		opts.GeoM.Reset()
@@ -73,6 +73,7 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	playerImg, _, err := ebitenutil.NewImageFromFile("assets/Characters(100x100)/Soldier/Soldier/Soldier.png")
+	orcImg, _, err := ebitenutil.NewImageFromFile("assets/Characters(100x100)/Orc/Orc/Orc.png")
 
 	// Screen and character dimensions
 	// screenWidth := 1084
@@ -94,6 +95,23 @@ func main() {
 			Img: playerImg,
 			X:   initialX,
 			Y:   initialY,
+		},
+		sprites: []*Sprite{
+			{
+				Img: orcImg,
+				X:   100,
+				Y:   100,
+			},
+			{
+				Img: orcImg,
+				X:   300,
+				Y:   200,
+			},
+			{
+				Img: orcImg,
+				X:   190,
+				Y:   150,
+			},
 		},
 	}); err != nil {
 		log.Fatal(err)

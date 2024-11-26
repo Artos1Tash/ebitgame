@@ -1,120 +1,218 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"log"
 
-	// "fmt"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	// "github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Sprite struct {
 	Img  *ebiten.Image
 	X, Y float64
 }
+
+type Player struct {
+	*Sprite
+	Health uint
+}
+
+type Enemy struct {
+	*Sprite
+	FollowsPlayer bool
+}
+
+type Potion struct {
+	*Sprite
+	AmtHeal uint
+}
+
 type Game struct {
-	player  *Sprite
-	sprites []*Sprite
+	// the image and position variables for our player
+	player  *Player
+	enemies []*Enemy
+	potions []*Potion
 }
 
 func (g *Game) Update() error {
 
-	// move the player based on keyboar input (left, right, up, down, wasd)
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+	// move the player based on keyboar input (left, right, up down)
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) && ebiten.IsKeyPressed(ebiten.KeyD) {
 		g.player.X -= 2
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		g.player.X += 2
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
 		g.player.Y -= 2
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
 		g.player.Y += 2
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyA) {
+		g.player.X -= 2
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyD) {
+		g.player.X += 2
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyW) {
+		g.player.Y -= 2
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyS) {
+		g.player.Y += 2
+	}
+
+	for _, sprite := range g.enemies {
+
+		if sprite.FollowsPlayer {
+			if sprite.X < g.player.X {
+				sprite.X += 1
+			} else if sprite.X > g.player.X {
+				sprite.X -= 1
+			}
+			if sprite.Y < g.player.Y {
+				sprite.Y += 1
+			} else if sprite.Y > g.player.Y {
+				sprite.Y -= 1
+			}
+		}
+
+	}
+
+	for _, potion := range g.potions {
+
+		if g.player.X > potion.X {
+			g.player.Health += potion.AmtHeal
+			fmt.Printf("Picked up potion! Health: %d\n", g.player.Health)
+		}
+
 	}
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+
+	// fill the screen with a nice sky color
 	screen.Fill(color.RGBA{120, 180, 255, 255})
 
-	opts := &ebiten.DrawImageOptions{}
+	opts := ebiten.DrawImageOptions{}
+	// set the translation of our drawImageOptions to the player's position
 	opts.GeoM.Translate(g.player.X, g.player.Y)
 
-	// Draw the player
+	// draw the player
 	screen.DrawImage(
-		g.player.Img.SubImage(image.Rect(0, 0, 64, 64)).(*ebiten.Image),
-		opts,
+		// grab a subimage of the spritesheet
+		g.player.Img.SubImage(
+			image.Rect(0, 0, 64, 64),
+		).(*ebiten.Image),
+		&opts,
 	)
-	for _, sprite := range g.sprites {
+
+	opts.GeoM.Reset()
+
+	for _, sprite := range g.enemies {
 		opts.GeoM.Translate(sprite.X, sprite.Y)
 
 		screen.DrawImage(
-			sprite.Img.SubImage(image.Rect(0, 0, 70, 70)).(*ebiten.Image),
-			opts,
+			sprite.Img.SubImage(
+				image.Rect(0, 0, 64, 64),
+			).(*ebiten.Image),
+			&opts,
 		)
+
 		opts.GeoM.Reset()
 	}
+
+	opts.GeoM.Reset()
+
+	for _, sprite := range g.potions {
+		opts.GeoM.Translate(sprite.X, sprite.Y)
+
+		screen.DrawImage(
+			sprite.Img.SubImage(
+				image.Rect(0, 0, 16, 16),
+			).(*ebiten.Image),
+			&opts,
+		)
+
+		opts.GeoM.Reset()
+	}
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 1080, 720
+	return 320, 240
 }
 
 func main() {
-	game := &Game{}
 	ebiten.SetWindowSize(640, 480)
-	ebiten.SetWindowTitle("Ready??? Prepare to fight!!!")
+	ebiten.SetWindowTitle("Hello, World!")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
+	// load the image from file
 	playerImg, _, err := ebitenutil.NewImageFromFile("assets/Characters(100x100)/Soldier/Soldier/Soldier.png")
-	orcImg, _, err := ebitenutil.NewImageFromFile("assets/Characters(100x100)/Orc/Orc/Orc.png")
-
-	// Screen and character dimensions
-	// screenWidth := 1084
-	// screenHeight := 720
-	// characterWidth := 64
-	// characterHeight := 64
-
-	// Calculate the center position
-	// initialX := float64((screenWidth - characterWidth) / 2)
-	// initialY := float64((screenHeight - characterHeight) / 2)
-	initialX := float64(0)
-	initialY := float64(0)
-
 	if err != nil {
+		// handle error
 		log.Fatal(err)
 	}
-	if err := ebiten.RunGame(&Game{
-		player: &Sprite{
-			Img: playerImg,
-			X:   initialX,
-			Y:   initialY,
-		},
-		sprites: []*Sprite{
-			{
-				Img: orcImg,
-				X:   100,
-				Y:   100,
-			},
-			{
-				Img: orcImg,
-				X:   300,
-				Y:   200,
-			},
-			{
-				Img: orcImg,
-				X:   190,
-				Y:   150,
-			},
-		},
-	}); err != nil {
+	// load the image from file
+	skeletonImg, _, err := ebitenutil.NewImageFromFile("assets/Characters(100x100)/Orc/Orc/Orc.png")
+	if err != nil {
+		// handle error
 		log.Fatal(err)
 	}
-	ebiten.RunGame(game)
+
+	potionImg, _, err := ebitenutil.NewImageFromFile("assets/Arrow(Projectile)/Arrow01(32x32).png")
+	if err != nil {
+		// handle error
+		log.Fatal(err)
+	}
+
+	game := Game{
+		player: &Player{
+			Sprite: &Sprite{
+				Img: playerImg,
+				X:   50.0,
+				Y:   50.0,
+			},
+			Health: 3,
+		},
+		enemies: []*Enemy{
+			{
+				&Sprite{
+					Img: skeletonImg,
+					X:   100.0,
+					Y:   100.0,
+				},
+				true,
+			},
+			{
+				&Sprite{
+					Img: skeletonImg,
+					X:   150.0,
+					Y:   50.0,
+				},
+				false,
+			},
+		},
+		potions: []*Potion{
+			{
+				&Sprite{
+					Img: potionImg,
+					X:   210.0,
+					Y:   100.0,
+				},
+				1.0,
+			},
+		},
+	}
+
+	if err := ebiten.RunGame(&game); err != nil {
+		log.Fatal(err)
+	}
 }
